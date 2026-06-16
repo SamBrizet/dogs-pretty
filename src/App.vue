@@ -22,10 +22,20 @@ const currentUser = ref(null);
 const authLoading = ref(false);
 const authError = ref("");
 const loginForm = ref({ username: "", password: "" });
+const authModalOpen = ref(false);
 
 const skeletonItems = Array.from({ length: 6 });
 
 const imageCount = computed(() => images.value.length);
+const authInitials = computed(() => {
+  const displayName = currentUser.value?.displayName || "Cuenta";
+  return displayName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() || "")
+    .join("");
+});
 const latestUploadText = computed(() => {
   if (!images.value.length) {
     return "No uploads yet";
@@ -137,6 +147,15 @@ function logoutUser() {
   localStorage.removeItem("dogsPrettyAuthToken");
   addToast("Sesion cerrada.", "success");
   fetchImages();
+  authModalOpen.value = false;
+}
+
+function toggleAuthModal() {
+  authModalOpen.value = !authModalOpen.value;
+}
+
+function closeAuthModal() {
+  authModalOpen.value = false;
 }
 
 function openPreview(image) {
@@ -430,37 +449,17 @@ onUnmounted(() => {
           >
             Upload
           </button>
-        </div>
-        <div class="auth-panel">
-          <template v-if="currentUser">
-            <p>Conectado como {{ currentUser.displayName }}</p>
-            <button type="button" class="tiny-btn" @click="logoutUser">Cerrar sesion</button>
-          </template>
-          <form v-else class="login-form" @submit.prevent="loginUser">
-            <input
-              v-model="loginForm.username"
-              type="text"
-              placeholder="Usuario"
-              required
-            />
-            <input
-              v-model="loginForm.password"
-              type="password"
-              placeholder="Contrasena"
-              required
-            />
-            <button type="submit" :disabled="authLoading">
-              {{ authLoading ? "Entrando..." : "Iniciar sesion" }}
-            </button>
-          </form>
-          <p v-if="!currentUser" class="auth-hint">
-            Demo: usuario demo / contrasena demo123
-          </p>
-          <p v-if="authError" class="upload-message error">{{ authError }}</p>
+          <button
+            type="button"
+            class="screen-btn"
+            :class="{ active: authModalOpen }"
+            @click="toggleAuthModal"
+          >
+            {{ currentUser ? currentUser.displayName : 'Cuenta' }}
+          </button>
         </div>
         <div class="actions">
           <button type="button" @click="fetchImages">Recargar</button>
-          <span>{{ imageCount }} imagenes</span>
         </div>
       </header>
 
@@ -576,6 +575,66 @@ onUnmounted(() => {
         </section>
       </Transition>
     </main>
+
+    <Transition name="zoom-fade">
+      <section
+        v-if="authModalOpen"
+        class="auth-overlay"
+        role="dialog"
+        aria-modal="true"
+        @click.self="closeAuthModal"
+      >
+        <div class="auth-modal">
+          <button class="preview-close" type="button" @click="closeAuthModal">
+            Cerrar
+          </button>
+
+          <div class="auth-modal-header">
+            <div class="auth-avatar">{{ authInitials }}</div>
+            <div>
+              <h2>Cuenta</h2>
+              <p class="auth-modal-copy">
+                Inicia sesion para dar likes y comentar fotos.
+              </p>
+            </div>
+          </div>
+
+          <template v-if="currentUser">
+            <div class="auth-user-card">
+              <p>Conectado como</p>
+              <h3>{{ currentUser.displayName }}</h3>
+              <small>@{{ currentUser.username }}</small>
+            </div>
+            <button type="button" class="tiny-btn" @click="logoutUser">
+              Cerrar sesion
+            </button>
+          </template>
+
+          <form v-else class="login-form modal-login" @submit.prevent="loginUser">
+            <input
+              v-model="loginForm.username"
+              type="text"
+              placeholder="Usuario"
+              required
+            />
+            <input
+              v-model="loginForm.password"
+              type="password"
+              placeholder="Contrasena"
+              required
+            />
+            <button type="submit" :disabled="authLoading">
+              {{ authLoading ? "Entrando..." : "Iniciar sesion" }}
+            </button>
+          </form>
+
+          <p v-if="!currentUser" class="auth-hint modal-hint">
+            Demo: usuario demo / contrasena demo123
+          </p>
+          <p v-if="authError" class="upload-message error">{{ authError }}</p>
+        </div>
+      </section>
+    </Transition>
 
     <section
       v-if="previewImage"

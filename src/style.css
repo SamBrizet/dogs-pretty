@@ -130,22 +130,14 @@ h1 {
   gap: 10px;
 }
 
-.auth-panel {
-  margin-top: 14px;
-  border: 1px solid #efdcc5;
-  background: #fffdf8;
-  border-radius: 12px;
-  padding: 10px;
-}
-
-.auth-panel p {
-  margin: 0;
-}
-
 .login-form {
   display: grid;
   grid-template-columns: 1fr 1fr auto;
   gap: 8px;
+}
+
+.modal-login {
+  grid-template-columns: 1fr;
 }
 
 .login-form input {
@@ -160,6 +152,10 @@ h1 {
   margin-top: 8px;
   font-size: 0.8rem;
   color: #6f5e50;
+}
+
+.modal-hint {
+  margin-top: 12px;
 }
 
 .screen-btn {
@@ -389,6 +385,77 @@ button:disabled {
   animation-delay: 120ms;
 }
 
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 13, 10, 0.45);
+  padding: 18px;
+}
+
+.auth-modal {
+  position: relative;
+  width: min(520px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.18);
+  padding: 38px 18px 18px;
+}
+
+.auth-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.auth-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #1f9d55, #157347);
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: 0 12px 24px rgba(21, 115, 71, 0.26);
+}
+
+.auth-modal h2 {
+  margin: 0;
+}
+
+.auth-modal-copy {
+  margin: 8px 0 14px;
+  color: var(--muted);
+}
+
+.auth-user-card {
+  border: 1px solid #eedbc1;
+  background: #fffaf3;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.auth-user-card p,
+.auth-user-card h3,
+.auth-user-card small {
+  margin: 0;
+}
+
+.auth-user-card h3 {
+  margin-top: 4px;
+}
+
+.auth-user-card small {
+  color: #7a6858;
+}
+
 .card img {
   width: 100%;
   aspect-ratio: 1 / 1;
@@ -466,6 +533,17 @@ h2 {
   place-items: center;
   background: rgba(15, 13, 10, 0.75);
   padding: 18px;
+}
+
+.zoom-fade-enter-active,
+.zoom-fade-leave-active {
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.zoom-fade-enter-from,
+.zoom-fade-leave-to {
+  opacity: 0;
+  transform: scale(0.98);
 }
 
 .preview-content {
@@ -722,6 +800,14 @@ h2 {
 
   .login-form {
     grid-template-columns: 1fr;
+  }
+
+  .auth-modal {
+    width: min(440px, 100%);
+  }
+
+  .auth-modal-header {
+    align-items: flex-start;
   }
 
   .preview-content {

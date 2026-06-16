@@ -14,8 +14,28 @@ const uploadError = ref("");
 const isDragging = ref(false);
 const toasts = ref([]);
 const fileInputRef = ref(null);
+const localPreviewUrl = ref("");
+
+const skeletonItems = Array.from({ length: 6 });
 
 const imageCount = computed(() => images.value.length);
+const latestUploadText = computed(() => {
+  if (!images.value.length) {
+    return "No uploads yet";
+  }
+
+  return new Date(images.value[0].updated).toLocaleString();
+});
+
+const totalStorageText = computed(() => {
+  const totalBytes = images.value.reduce((acc, image) => acc + (image.size || 0), 0);
+
+  if (totalBytes < 1024 * 1024) {
+    return `${(totalBytes / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(totalBytes / (1024 * 1024)).toFixed(2)} MB`;
+});
 
 async function fetchImages() {
   loading.value = true;
@@ -54,8 +74,21 @@ function handleKeydown(event) {
 
 function onFileSelected(event) {
   const file = event.target.files?.[0] || null;
-  selectedFile.value = file;
+  updateSelectedFile(file);
   uploadError.value = "";
+}
+
+function updateSelectedFile(file) {
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value);
+    localPreviewUrl.value = "";
+  }
+
+  selectedFile.value = file;
+
+  if (file) {
+    localPreviewUrl.value = URL.createObjectURL(file);
+  }
 }
 
 function addToast(message, type = "success") {
@@ -100,7 +133,7 @@ function onDrop(event) {
   const file = event.dataTransfer?.files?.[0] || null;
 
   if (file) {
-    selectedFile.value = file;
+    updateSelectedFile(file);
     uploadError.value = "";
   }
 }
@@ -153,7 +186,7 @@ async function uploadImage() {
     });
 
     addToast("Imagen subida correctamente.", "success");
-    selectedFile.value = null;
+    updateSelectedFile(null);
     if (fileInputRef.value) {
       fileInputRef.value.value = "";
     }
@@ -170,7 +203,12 @@ async function uploadImage() {
 
 onMounted(fetchImages);
 onMounted(() => window.addEventListener("keydown", handleKeydown));
-onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
+onUnmounted(() => {
+  window.removeEventListener("keydown", handleKeydown);
+  if (localPreviewUrl.value) {
+    URL.revokeObjectURL(localPreviewUrl.value);
+  }
+});
 </script>
 
 <template>
@@ -184,6 +222,20 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
           Imagenes servidas desde Google Cloud Storage a traves de tu API en
           Express.
         </p>
+        <div class="stats-strip">
+          <article class="stat-card">
+            <p>Total Images</p>
+            <h3>{{ imageCount }}</h3>
+          </article>
+          <article class="stat-card">
+            <p>Storage</p>
+            <h3>{{ totalStorageText }}</h3>
+          </article>
+          <article class="stat-card">
+            <p>Latest Upload</p>
+            <h3>{{ latestUploadText }}</h3>
+          </article>
+        </div>
         <div class="screen-switch">
           <button
             type="button"
@@ -208,68 +260,106 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
         </div>
       </header>
 
-      <section v-if="activeScreen === 'upload'" class="upload-panel">
-        <h2>Sube tus imagenes de perritos bonitos</h2>
-        <p class="upload-help">
-          Arrastra y suelta una imagen o selecciona un archivo desde tu equipo.
-        </p>
+      <Transition name="fade-slide" mode="out-in">
+        <section v-if="activeScreen === 'upload'" class="upload-panel">
+          <h2>Sube tus imagenes de perritos bonitos</h2>
+          <p class="upload-help">
+            Arrastra y suelta una imagen o selecciona un archivo desde tu equipo.
+          </p>
 
-        <div
-          class="dropzone"
-          :class="{ dragging: isDragging }"
-          @dragenter="onDragOver"
-          @dragover="onDragOver"
-          @dragleave="onDragLeave"
-          @drop="onDrop"
-          @click="openFileDialog"
-        >
-          <p>Drop your dog image here</p>
-          <small>PNG, JPG, WEBP, GIF, BMP, AVIF - Max 10MB</small>
-        </div>
+          <div class="upload-layout">
+            <div>
+              <div
+                class="dropzone"
+                :class="{ dragging: isDragging }"
+                @dragenter="onDragOver"
+                @dragover="onDragOver"
+                @dragleave="onDragLeave"
+                @drop="onDrop"
+                @click="openFileDialog"
+              >
+                <p>Drop your dog image here</p>
+                <small>PNG, JPG, WEBP, GIF, BMP, AVIF - Max 10MB</small>
+              </div>
 
-        <label class="file-input-wrap">
-          <span>Seleccionar imagen</span>
-          <input
-            ref="fileInputRef"
-            type="file"
-            accept="image/*"
-            @change="onFileSelected"
-          />
-        </label>
+              <label class="file-input-wrap">
+                <span>Seleccionar imagen</span>
+                <input
+                  ref="fileInputRef"
+                  type="file"
+                  accept="image/*"
+                  @change="onFileSelected"
+                />
+              </label>
 
-        <p v-if="selectedFile" class="file-selected">
-          Archivo: {{ selectedFile.name }}
-        </p>
+              <p v-if="selectedFile" class="file-selected">
+                Archivo: {{ selectedFile.name }}
+              </p>
 
-        <button type="button" :disabled="uploading" @click="uploadImage">
-          {{ uploading ? "Subiendo..." : "Subir imagen" }}
-        </button>
+              <button type="button" :disabled="uploading" @click="uploadImage">
+                {{ uploading ? "Subiendo..." : "Subir imagen" }}
+              </button>
 
-        <div v-if="uploading" class="progress-wrap">
-          <div class="progress-bar" :style="{ width: `${uploadProgress}%` }"></div>
-          <span>{{ uploadProgress }}%</span>
-        </div>
+              <div v-if="uploading" class="progress-wrap">
+                <div
+                  class="progress-bar"
+                  :style="{ width: `${uploadProgress}%` }"
+                ></div>
+                <span>{{ uploadProgress }}%</span>
+              </div>
 
-        <p v-if="uploadError" class="upload-message error">{{ uploadError }}</p>
-      </section>
+              <p v-if="uploadError" class="upload-message error">{{ uploadError }}</p>
+            </div>
 
-      <section v-else-if="loading" class="status">Cargando imagenes...</section>
-      <section v-else-if="error" class="status error">{{ error }}</section>
-
-      <section v-else class="gallery">
-        <article
-          v-for="image in images"
-          :key="image.path"
-          class="card previewable"
-          @click="openPreview(image)"
-        >
-          <img :src="image.url" :alt="image.name" loading="lazy" />
-          <div class="meta">
-            <h2>{{ image.name }}</h2>
-            <p>{{ new Date(image.updated).toLocaleString() }}</p>
+            <aside class="local-preview-card">
+              <p>Local Preview</p>
+              <img
+                v-if="localPreviewUrl"
+                :src="localPreviewUrl"
+                alt="Selected preview"
+                class="local-preview-image"
+              />
+              <div v-else class="local-preview-empty">No image selected yet</div>
+            </aside>
           </div>
-        </article>
-      </section>
+        </section>
+
+        <section v-else>
+          <section v-if="loading" class="gallery skeleton-grid">
+            <article v-for="(_, idx) in skeletonItems" :key="idx" class="card skeleton-card">
+              <div class="skeleton-image"></div>
+              <div class="meta">
+                <div class="skeleton-line"></div>
+                <div class="skeleton-line short"></div>
+              </div>
+            </article>
+          </section>
+
+          <section v-else-if="error" class="status error">{{ error }}</section>
+
+          <section v-else-if="!images.length" class="empty-state">
+            <h2>No dog photos yet</h2>
+            <p>Sube tu primera imagen para empezar a llenar esta galeria.</p>
+            <button type="button" @click="activeScreen = 'upload'">Ir a Upload</button>
+          </section>
+
+          <section v-else class="gallery">
+            <article
+              v-for="image in images"
+              :key="image.path"
+              class="card previewable"
+              @click="openPreview(image)"
+            >
+              <img :src="image.url" :alt="image.name" loading="lazy" />
+              <div class="meta">
+                <h2>{{ image.name }}</h2>
+                <p>{{ new Date(image.updated).toLocaleString() }}</p>
+              </div>
+              <div class="card-overlay">Click to preview</div>
+            </article>
+          </section>
+        </section>
+      </Transition>
     </main>
 
     <section

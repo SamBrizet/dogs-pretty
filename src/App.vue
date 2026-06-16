@@ -15,9 +15,13 @@ const isDragging = ref(false);
 const toasts = ref([]);
 const fileInputRef = ref(null);
 const localPreviewUrl = ref("");
-const commentAuthor = ref("");
 const commentText = ref("");
 const submittingComment = ref(false);
+const authToken = ref(localStorage.getItem("dogsPrettyAuthToken") || "");
+const currentUser = ref(null);
+const authLoading = ref(false);
+const authError = ref("");
+const loginForm = ref({ username: "", password: "" });
 
 const skeletonItems = Array.from({ length: 6 });
 
@@ -45,7 +49,11 @@ async function fetchImages() {
   error.value = "";
 
   try {
-    const response = await fetch(`${apiBaseUrl}/api/images`);
+    const headers = authToken.value
+      ? { Authorization: `Bearer ${authToken.value}` }
+      : {};
+
+    const response = await fetch(`${apiBaseUrl}/api/images`, { headers });
 
     if (!response.ok) {
       throw new Error(`Error HTTP ${response.status}`);
@@ -59,6 +67,76 @@ async function fetchImages() {
   } finally {
     loading.value = false;
   }
+}
+
+async function fetchMe() {
+  if (!authToken.value) {
+    currentUser.value = null;
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${authToken.value}`,
+      },
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || `Error HTTP ${response.status}`);
+    }
+
+    currentUser.value = data.user;
+  } catch {
+    authToken.value = "";
+    currentUser.value = null;
+    localStorage.removeItem("dogsPrettyAuthToken");
+  }
+}
+
+async function loginUser() {
+  authError.value = "";
+  authLoading.value = true;
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username: loginForm.value.username,
+        password: loginForm.value.password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "No se pudo iniciar sesion.");
+    }
+
+    authToken.value = data.token;
+    currentUser.value = data.user;
+    localStorage.setItem("dogsPrettyAuthToken", data.token);
+    loginForm.value.password = "";
+    addToast(`Hola ${data.user.displayName}`, "success");
+    await fetchImages();
+  } catch (err) {
+    authError.value = err?.message || "No se pudo iniciar sesion.";
+  } finally {
+    authLoading.value = false;
+  }
+}
+
+function logoutUser() {
+  authToken.value = "";
+  currentUser.value = null;
+  localStorage.removeItem("dogsPrettyAuthToken");
+  addToast("Sesion cerrada.", "success");
+  fetchImages();
 }
 
 function openPreview(image) {
@@ -212,6 +290,7 @@ function updateImageInteraction(imagePath, interaction) {
           ...image,
           likes: interaction.likes,
           comments: interaction.comments,
+          likedByUser: interaction.likedByUser,
         }
       : image,
   );
@@ -221,16 +300,23 @@ function updateImageInteraction(imagePath, interaction) {
       ...previewImage.value,
       likes: interaction.likes,
       comments: interaction.comments,
+      likedByUser: interaction.likedByUser,
     };
   }
 }
 
 async function likeImage(imagePath) {
+  if (!authToken.value) {
+    addToast("Debes iniciar sesion para dar like.", "error");
+    return;
+  }
+
   try {
     const response = await fetch(`${apiBaseUrl}/api/images/like`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken.value}`,
       },
       body: JSON.stringify({ imagePath }),
     });
@@ -248,6 +334,11 @@ async function likeImage(imagePath) {
 }
 
 async function submitComment(imagePath) {
+  if (!authToken.value) {
+    addToast("Debes iniciar sesion para comentar.", "error");
+    return;
+  }
+
   const text = commentText.value.trim();
 
   if (!text) {
@@ -262,10 +353,10 @@ async function submitComment(imagePath) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${authToken.value}`,
       },
       body: JSON.stringify({
         imagePath,
-        author: commentAuthor.value.trim(),
         text,
       }),
     });
@@ -287,6 +378,7 @@ async function submitComment(imagePath) {
 }
 
 onMounted(fetchImages);
+onMounted(fetchMe);
 onMounted(() => window.addEventListener("keydown", handleKeydown));
 onUnmounted(() => {
   window.removeEventListener("keydown", handleKeydown);
@@ -338,6 +430,33 @@ onUnmounted(() => {
           >
             Upload
           </button>
+        </div>
+        <div class="auth-panel">
+          <template v-if="currentUser">
+            <p>Conectado como {{ currentUser.displayName }}</p>
+            <button type="button" class="tiny-btn" @click="logoutUser">Cerrar sesion</button>
+          </template>
+          <form v-else class="login-form" @submit.prevent="loginUser">
+            <input
+              v-model="loginForm.username"
+              type="text"
+              placeholder="Usuario"
+              required
+            />
+            <input
+              v-model="loginForm.password"
+              type="password"
+              placeholder="Contrasena"
+              required
+            />
+            <button type="submit" :disabled="authLoading">
+              {{ authLoading ? "Entrando..." : "Iniciar sesion" }}
+            </button>
+          </form>
+          <p v-if="!currentUser" class="auth-hint">
+            Demo: usuario demo / contrasena demo123
+          </p>
+          <p v-if="authError" class="upload-message error">{{ authError }}</p>
         </div>
         <div class="actions">
           <button type="button" @click="fetchImages">Recargar</button>
@@ -443,6 +562,7 @@ onUnmounted(() => {
                   <button
                     type="button"
                     class="tiny-btn"
+                    :class="{ liked: image.likedByUser }"
                     @click.stop="likeImage(image.path)"
                   >
                     ❤️ {{ image.likes || 0 }}
@@ -477,7 +597,12 @@ onUnmounted(() => {
             />
             <p class="preview-title">{{ previewImage.name }}</p>
             <div class="preview-actions">
-              <button type="button" class="tiny-btn" @click="likeImage(previewImage.path)">
+              <button
+                type="button"
+                class="tiny-btn"
+                :class="{ liked: previewImage.likedByUser }"
+                @click="likeImage(previewImage.path)"
+              >
                 ❤️ {{ previewImage.likes || 0 }}
               </button>
               <span>{{ previewImage.comments?.length || 0 }} comentarios</span>
@@ -488,20 +613,18 @@ onUnmounted(() => {
             <h3>Comentarios</h3>
 
             <form class="comment-form" @submit.prevent="submitComment(previewImage.path)">
-              <input
-                v-model="commentAuthor"
-                type="text"
-                placeholder="Tu nombre (opcional)"
-                maxlength="40"
-              />
               <textarea
                 v-model="commentText"
                 placeholder="Escribe un comentario bonito..."
                 maxlength="300"
+                :disabled="!currentUser"
               ></textarea>
-              <button type="submit" :disabled="submittingComment">
+              <button type="submit" :disabled="submittingComment || !currentUser">
                 {{ submittingComment ? "Enviando..." : "Comentar" }}
               </button>
+              <p v-if="!currentUser" class="auth-hint">
+                Inicia sesion para comentar.
+              </p>
             </form>
 
             <ul v-if="previewImage.comments?.length" class="comment-list">

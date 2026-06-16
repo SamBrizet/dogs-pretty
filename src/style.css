@@ -130,6 +130,38 @@ h1 {
   gap: 10px;
 }
 
+.auth-panel {
+  margin-top: 14px;
+  border: 1px solid #efdcc5;
+  background: #fffdf8;
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.auth-panel p {
+  margin: 0;
+}
+
+.login-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+}
+
+.login-form input {
+  border: 1px solid #dbc7aa;
+  border-radius: 999px;
+  padding: 8px 12px;
+  font: inherit;
+  background: #fff;
+}
+
+.auth-hint {
+  margin-top: 8px;
+  font-size: 0.8rem;
+  color: #6f5e50;
+}
+
 .screen-btn {
   background: #f3eee5;
   color: #574533;
@@ -403,6 +435,12 @@ button:disabled {
 .tiny-btn:hover {
   box-shadow: none;
   background: #efdfc9;
+}
+
+.tiny-btn.liked {
+  background: #ffd8df;
+  border-color: #ffc2cf;
+  color: #8b2339;
 }
 
 .meta {
@@ -680,6 +718,10 @@ h2 {
 
   .gallery {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .login-form {
+    grid-template-columns: 1fr;
   }
 
   .preview-content {

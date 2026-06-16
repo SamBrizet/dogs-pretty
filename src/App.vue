@@ -6,6 +6,11 @@ const loading = ref(true);
 const error = ref("");
 const images = ref([]);
 const previewImage = ref(null);
+const activeScreen = ref("gallery");
+const selectedFile = ref(null);
+const uploading = ref(false);
+const uploadMessage = ref("");
+const uploadError = ref("");
 
 const imageCount = computed(() => images.value.length);
 
@@ -44,6 +49,50 @@ function handleKeydown(event) {
   }
 }
 
+function onFileSelected(event) {
+  const file = event.target.files?.[0] || null;
+  selectedFile.value = file;
+  uploadError.value = "";
+  uploadMessage.value = "";
+}
+
+async function uploadImage() {
+  uploadError.value = "";
+  uploadMessage.value = "";
+
+  if (!selectedFile.value) {
+    uploadError.value = "Selecciona una imagen antes de subir.";
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("image", selectedFile.value);
+
+  uploading.value = true;
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/images/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || `Error HTTP ${response.status}`);
+    }
+
+    uploadMessage.value = "Imagen subida correctamente.";
+    selectedFile.value = null;
+    await fetchImages();
+    activeScreen.value = "gallery";
+  } catch (err) {
+    uploadError.value = err?.message || "No se pudo subir la imagen.";
+  } finally {
+    uploading.value = false;
+  }
+}
+
 onMounted(fetchImages);
 onMounted(() => window.addEventListener("keydown", handleKeydown));
 onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
@@ -60,13 +109,56 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
           Imagenes servidas desde Google Cloud Storage a traves de tu API en
           Express.
         </p>
+        <div class="screen-switch">
+          <button
+            type="button"
+            class="screen-btn"
+            :class="{ active: activeScreen === 'gallery' }"
+            @click="activeScreen = 'gallery'"
+          >
+            Gallery
+          </button>
+          <button
+            type="button"
+            class="screen-btn"
+            :class="{ active: activeScreen === 'upload' }"
+            @click="activeScreen = 'upload'"
+          >
+            Upload
+          </button>
+        </div>
         <div class="actions">
           <button type="button" @click="fetchImages">Recargar</button>
           <span>{{ imageCount }} imagenes</span>
         </div>
       </header>
 
-      <section v-if="loading" class="status">Cargando imagenes...</section>
+      <section v-if="activeScreen === 'upload'" class="upload-panel">
+        <h2>Sube tus imagenes de perritos bonitos</h2>
+        <p class="upload-help">
+          Formatos permitidos: PNG, JPG, WEBP, GIF, BMP, AVIF.
+        </p>
+
+        <label class="file-input-wrap">
+          <span>Seleccionar imagen</span>
+          <input type="file" accept="image/*" @change="onFileSelected" />
+        </label>
+
+        <p v-if="selectedFile" class="file-selected">
+          Archivo: {{ selectedFile.name }}
+        </p>
+
+        <button type="button" :disabled="uploading" @click="uploadImage">
+          {{ uploading ? "Subiendo..." : "Subir imagen" }}
+        </button>
+
+        <p v-if="uploadMessage" class="upload-message success">
+          {{ uploadMessage }}
+        </p>
+        <p v-if="uploadError" class="upload-message error">{{ uploadError }}</p>
+      </section>
+
+      <section v-else-if="loading" class="status">Cargando imagenes...</section>
       <section v-else-if="error" class="status error">{{ error }}</section>
 
       <section v-else class="gallery">

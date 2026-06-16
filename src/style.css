@@ -96,6 +96,23 @@ h1 {
   flex-wrap: wrap;
 }
 
+.screen-switch {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.screen-btn {
+  background: #f3eee5;
+  color: #574533;
+  border: 1px solid var(--line);
+}
+
+.screen-btn.active {
+  background: linear-gradient(120deg, #1f9d55, #157347);
+  color: #fff;
+}
+
 button {
   border: 0;
   border-radius: 999px;
@@ -125,6 +142,56 @@ button:hover {
   border-color: #bb3737;
   color: #7f1e1e;
   background: #ffe7e7;
+}
+
+.upload-panel {
+  margin-top: 20px;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.upload-panel h2 {
+  margin: 0;
+}
+
+.upload-help {
+  margin: 8px 0 14px;
+  color: var(--muted);
+}
+
+.file-input-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-weight: 700;
+}
+
+.file-input-wrap input {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  padding: 9px;
+}
+
+.file-selected {
+  margin: 6px 0 14px;
+  color: #4b3d31;
+}
+
+.upload-message {
+  margin: 14px 0 0;
+  font-weight: 700;
+}
+
+.upload-message.success {
+  color: #1b6e40;
+}
+
+.upload-message.error {
+  color: #8d2424;
 }
 
 .gallery {

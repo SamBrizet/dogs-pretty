@@ -468,48 +468,52 @@ onUnmounted(() => {
         <button class="preview-close" type="button" @click="closePreview">
           Cerrar
         </button>
-        <img
-          :src="previewImage.url"
-          :alt="previewImage.name"
-          class="preview-image"
-        />
-        <p class="preview-title">{{ previewImage.name }}</p>
-        <div class="preview-actions">
-          <button type="button" class="tiny-btn" @click="likeImage(previewImage.path)">
-            ❤️ {{ previewImage.likes || 0 }}
-          </button>
-          <span>{{ previewImage.comments?.length || 0 }} comentarios</span>
-        </div>
-
-        <section class="comments-panel">
-          <h3>Comentarios</h3>
-
-          <form class="comment-form" @submit.prevent="submitComment(previewImage.path)">
-            <input
-              v-model="commentAuthor"
-              type="text"
-              placeholder="Tu nombre (opcional)"
-              maxlength="40"
+        <div class="preview-grid">
+          <section class="preview-media">
+            <img
+              :src="previewImage.url"
+              :alt="previewImage.name"
+              class="preview-image"
             />
-            <textarea
-              v-model="commentText"
-              placeholder="Escribe un comentario bonito..."
-              maxlength="300"
-            ></textarea>
-            <button type="submit" :disabled="submittingComment">
-              {{ submittingComment ? "Enviando..." : "Comentar" }}
-            </button>
-          </form>
+            <p class="preview-title">{{ previewImage.name }}</p>
+            <div class="preview-actions">
+              <button type="button" class="tiny-btn" @click="likeImage(previewImage.path)">
+                ❤️ {{ previewImage.likes || 0 }}
+              </button>
+              <span>{{ previewImage.comments?.length || 0 }} comentarios</span>
+            </div>
+          </section>
 
-          <ul v-if="previewImage.comments?.length" class="comment-list">
-            <li v-for="comment in previewImage.comments" :key="comment.id">
-              <p class="comment-author">{{ comment.author || "Anonimo" }}</p>
-              <p class="comment-text">{{ comment.text }}</p>
-              <p class="comment-date">{{ new Date(comment.createdAt).toLocaleString() }}</p>
-            </li>
-          </ul>
-          <p v-else class="no-comments">Aun no hay comentarios.</p>
-        </section>
+          <section class="comments-panel">
+            <h3>Comentarios</h3>
+
+            <form class="comment-form" @submit.prevent="submitComment(previewImage.path)">
+              <input
+                v-model="commentAuthor"
+                type="text"
+                placeholder="Tu nombre (opcional)"
+                maxlength="40"
+              />
+              <textarea
+                v-model="commentText"
+                placeholder="Escribe un comentario bonito..."
+                maxlength="300"
+              ></textarea>
+              <button type="submit" :disabled="submittingComment">
+                {{ submittingComment ? "Enviando..." : "Comentar" }}
+              </button>
+            </form>
+
+            <ul v-if="previewImage.comments?.length" class="comment-list">
+              <li v-for="comment in previewImage.comments" :key="comment.id">
+                <p class="comment-author">{{ comment.author || "Anonimo" }}</p>
+                <p class="comment-text">{{ comment.text }}</p>
+                <p class="comment-date">{{ new Date(comment.createdAt).toLocaleString() }}</p>
+              </li>
+            </ul>
+            <p v-else class="no-comments">Aun no hay comentarios.</p>
+          </section>
+        </div>
       </div>
     </section>
 

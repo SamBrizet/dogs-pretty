@@ -33,7 +33,8 @@ onMounted(fetchImages);
 </script>
 
 <template>
-  <div class="page-bg">
+  <div class="app-root">
+    <div class="page-bg"></div>
     <main class="page">
       <header class="hero">
         <p class="eyebrow">DOGS PRETTY</p>

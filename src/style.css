@@ -35,6 +35,11 @@ body {
   min-height: 100vh;
 }
 
+.app-root {
+  position: relative;
+  min-height: 100vh;
+}
+
 .page-bg {
   position: fixed;
   inset: 0;
@@ -43,10 +48,12 @@ body {
     linear-gradient(90deg, rgba(255, 255, 255, 0.2) 1px, transparent 1px);
   background-size: 24px 24px;
   opacity: 0.3;
+  z-index: 0;
 }
 
 .page {
   position: relative;
+  z-index: 1;
   max-width: 1200px;
   margin: 0 auto;
   padding: 40px 22px 64px;

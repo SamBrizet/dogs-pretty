@@ -145,6 +145,10 @@ button:hover {
   animation: card-in 440ms ease forwards;
 }
 
+.previewable {
+  cursor: zoom-in;
+}
+
 .card:nth-child(2n) {
   animation-delay: 60ms;
 }
@@ -173,6 +177,46 @@ h2 {
   margin: 6px 0 0;
   color: var(--muted);
   font-size: 0.85rem;
+}
+
+.preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 13, 10, 0.75);
+  padding: 18px;
+}
+
+.preview-content {
+  position: relative;
+  width: min(900px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  padding: 14px;
+}
+
+.preview-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 8px 14px;
+}
+
+.preview-image {
+  width: 100%;
+  max-height: 75vh;
+  object-fit: contain;
+  border-radius: 12px;
+  display: block;
+  background: #f7f2ea;
+}
+
+.preview-title {
+  margin: 10px 4px 4px;
+  font-weight: 700;
 }
 
 @keyframes rise-in {

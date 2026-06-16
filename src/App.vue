@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 const loading = ref(true);
 const error = ref("");
 const images = ref([]);
+const previewImage = ref(null);
 
 const imageCount = computed(() => images.value.length);
 
@@ -29,7 +30,23 @@ async function fetchImages() {
   }
 }
 
+function openPreview(image) {
+  previewImage.value = image;
+}
+
+function closePreview() {
+  previewImage.value = null;
+}
+
+function handleKeydown(event) {
+  if (event.key === "Escape") {
+    closePreview();
+  }
+}
+
 onMounted(fetchImages);
+onMounted(() => window.addEventListener("keydown", handleKeydown));
+onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
 </script>
 
 <template>
@@ -53,7 +70,12 @@ onMounted(fetchImages);
       <section v-else-if="error" class="status error">{{ error }}</section>
 
       <section v-else class="gallery">
-        <article v-for="image in images" :key="image.path" class="card">
+        <article
+          v-for="image in images"
+          :key="image.path"
+          class="card previewable"
+          @click="openPreview(image)"
+        >
           <img :src="image.url" :alt="image.name" loading="lazy" />
           <div class="meta">
             <h2>{{ image.name }}</h2>
@@ -62,5 +84,25 @@ onMounted(fetchImages);
         </article>
       </section>
     </main>
+
+    <section
+      v-if="previewImage"
+      class="preview-overlay"
+      role="dialog"
+      aria-modal="true"
+      @click.self="closePreview"
+    >
+      <div class="preview-content">
+        <button class="preview-close" type="button" @click="closePreview">
+          Cerrar
+        </button>
+        <img
+          :src="previewImage.url"
+          :alt="previewImage.name"
+          class="preview-image"
+        />
+        <p class="preview-title">{{ previewImage.name }}</p>
+      </div>
+    </section>
   </div>
 </template>

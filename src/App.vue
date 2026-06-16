@@ -21,7 +21,14 @@ const authToken = ref(localStorage.getItem("dogsPrettyAuthToken") || "");
 const currentUser = ref(null);
 const authLoading = ref(false);
 const authError = ref("");
+const authMode = ref("login");
 const loginForm = ref({ username: "", password: "" });
+const registerForm = ref({
+  displayName: "",
+  username: "",
+  password: "",
+  confirmPassword: "",
+});
 const authModalOpen = ref(false);
 
 const skeletonItems = Array.from({ length: 6 });
@@ -158,6 +165,11 @@ function closeAuthModal() {
   authModalOpen.value = false;
 }
 
+function setAuthMode(mode) {
+  authMode.value = mode;
+  authError.value = "";
+}
+
 function openPreview(image) {
   previewImage.value = image;
   commentText.value = "";
@@ -189,6 +201,54 @@ function updateSelectedFile(file) {
 
   if (file) {
     localPreviewUrl.value = URL.createObjectURL(file);
+  }
+}
+
+async function registerUser() {
+  authError.value = "";
+  authLoading.value = true;
+
+  if (registerForm.value.password !== registerForm.value.confirmPassword) {
+    authError.value = "Las contrasenas no coinciden.";
+    authLoading.value = false;
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        displayName: registerForm.value.displayName,
+        username: registerForm.value.username,
+        password: registerForm.value.password,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "No se pudo registrar la cuenta.");
+    }
+
+    authToken.value = data.token;
+    currentUser.value = data.user;
+    localStorage.setItem("dogsPrettyAuthToken", data.token);
+    registerForm.value = {
+      displayName: "",
+      username: "",
+      password: "",
+      confirmPassword: "",
+    };
+    setAuthMode("login");
+    addToast(`Cuenta creada para ${data.user.displayName}`, "success");
+    await fetchImages();
+  } catch (err) {
+    authError.value = err?.message || "No se pudo registrar la cuenta.";
+  } finally {
+    authLoading.value = false;
   }
 }
 
@@ -610,27 +670,87 @@ onUnmounted(() => {
             </button>
           </template>
 
-          <form v-else class="login-form modal-login" @submit.prevent="loginUser">
-            <input
-              v-model="loginForm.username"
-              type="text"
-              placeholder="Usuario"
-              required
-            />
-            <input
-              v-model="loginForm.password"
-              type="password"
-              placeholder="Contrasena"
-              required
-            />
-            <button type="submit" :disabled="authLoading">
-              {{ authLoading ? "Entrando..." : "Iniciar sesion" }}
-            </button>
-          </form>
+          <template v-else>
+            <div class="auth-tabs">
+              <button
+                type="button"
+                class="screen-btn"
+                :class="{ active: authMode === 'login' }"
+                @click="setAuthMode('login')"
+              >
+                Iniciar sesion
+              </button>
+              <button
+                type="button"
+                class="screen-btn"
+                :class="{ active: authMode === 'register' }"
+                @click="setAuthMode('register')"
+              >
+                Registrarse
+              </button>
+            </div>
 
-          <p v-if="!currentUser" class="auth-hint modal-hint">
-            Demo: usuario demo / contrasena demo123
-          </p>
+            <form
+              v-if="authMode === 'login'"
+              class="login-form modal-login"
+              @submit.prevent="loginUser"
+            >
+              <input
+                v-model="loginForm.username"
+                type="text"
+                placeholder="Usuario"
+                required
+              />
+              <input
+                v-model="loginForm.password"
+                type="password"
+                placeholder="Contrasena"
+                required
+              />
+              <button type="submit" :disabled="authLoading">
+                {{ authLoading ? "Entrando..." : "Iniciar sesion" }}
+              </button>
+            </form>
+
+            <form
+              v-else
+              class="login-form modal-login"
+              @submit.prevent="registerUser"
+            >
+              <input
+                v-model="registerForm.displayName"
+                type="text"
+                placeholder="Nombre visible"
+                required
+              />
+              <input
+                v-model="registerForm.username"
+                type="text"
+                placeholder="Usuario"
+                required
+              />
+              <input
+                v-model="registerForm.password"
+                type="password"
+                placeholder="Contrasena"
+                required
+              />
+              <input
+                v-model="registerForm.confirmPassword"
+                type="password"
+                placeholder="Confirmar contrasena"
+                required
+              />
+              <button type="submit" :disabled="authLoading">
+                {{ authLoading ? "Creando cuenta..." : "Crear cuenta" }}
+              </button>
+            </form>
+
+            <p v-if="authMode === 'login'" class="auth-hint modal-hint">
+              Demo: usuario demo / contrasena demo123
+            </p>
+          </template>
+
           <p v-if="authError" class="upload-message error">{{ authError }}</p>
         </div>
       </section>

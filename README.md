@@ -1,5 +1,36 @@
-# Vue 3 + Vite
+# Dogs Pretty Frontend
 
-This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
+Frontend en Vue 3 + Vite para galeria y subida de imagenes de perritos.
 
-Learn more about IDE Support for Vue in the [Vue Docs Scaling up Guide](https://vuejs.org/guide/scaling-up/tooling.html#ide-support).
+## Stack
+
+- Vue 3
+- Vite
+- CSS puro
+
+## Requisitos
+
+- Node.js 18+
+
+## Variables de entorno
+
+Crear un archivo `.env` en esta carpeta:
+
+```env
+VITE_API_BASE_URL=http://localhost:3000
+```
+
+## Scripts
+
+- `npm run dev`: levanta frontend local
+- `npm run build`: compila para produccion
+- `npm run preview`: vista local del build
+
+## Funcionalidades
+
+- Galeria de imagenes desde GCP
+- Preview tipo lightbox
+- Pantalla Upload con:
+	- Drag and drop
+	- Barra de progreso real
+	- Toasts de exito/error

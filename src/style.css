@@ -129,6 +129,13 @@ button:hover {
   box-shadow: 0 8px 18px rgba(21, 115, 71, 0.35);
 }
 
+button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .status {
   margin-top: 20px;
   border: 2px dashed var(--line);
@@ -161,10 +168,38 @@ button:hover {
   color: var(--muted);
 }
 
+.dropzone {
+  border: 2px dashed #b8d7c5;
+  border-radius: 14px;
+  padding: 18px;
+  text-align: center;
+  background: #f8fff9;
+  color: #2f593f;
+  cursor: pointer;
+  transition: border-color 180ms ease, transform 180ms ease;
+}
+
+.dropzone.dragging {
+  border-color: #1f9d55;
+  transform: translateY(-1px);
+}
+
+.dropzone p {
+  margin: 0;
+  font-weight: 700;
+}
+
+.dropzone small {
+  display: block;
+  margin-top: 6px;
+  color: #5f7d6a;
+}
+
 .file-input-wrap {
   display: inline-flex;
   flex-direction: column;
   gap: 8px;
+  margin-top: 14px;
   margin-bottom: 10px;
   font-weight: 700;
 }
@@ -179,6 +214,33 @@ button:hover {
 .file-selected {
   margin: 6px 0 14px;
   color: #4b3d31;
+}
+
+.progress-wrap {
+  margin-top: 14px;
+  background: #f0e8da;
+  border-radius: 999px;
+  overflow: hidden;
+  height: 24px;
+  position: relative;
+  border: 1px solid #e0d0b8;
+}
+
+.progress-bar {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(120deg, #27b062, #157347);
+  transition: width 120ms linear;
+}
+
+.progress-wrap span {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #163728;
 }
 
 .upload-message {
@@ -284,6 +346,34 @@ h2 {
 .preview-title {
   margin: 10px 4px 4px;
   font-weight: 700;
+}
+
+.toast-container {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+}
+
+.toast {
+  min-width: 220px;
+  max-width: 320px;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.toast.success {
+  background: linear-gradient(120deg, #1f9d55, #157347);
+}
+
+.toast.error {
+  background: linear-gradient(120deg, #c44141, #882727);
 }
 
 @keyframes rise-in {

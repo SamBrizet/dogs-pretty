@@ -9,8 +9,11 @@ const previewImage = ref(null);
 const activeScreen = ref("gallery");
 const selectedFile = ref(null);
 const uploading = ref(false);
-const uploadMessage = ref("");
+const uploadProgress = ref(0);
 const uploadError = ref("");
+const isDragging = ref(false);
+const toasts = ref([]);
+const fileInputRef = ref(null);
 
 const imageCount = computed(() => images.value.length);
 
@@ -53,15 +56,62 @@ function onFileSelected(event) {
   const file = event.target.files?.[0] || null;
   selectedFile.value = file;
   uploadError.value = "";
-  uploadMessage.value = "";
+}
+
+function addToast(message, type = "success") {
+  const id = Date.now() + Math.random();
+  toasts.value.push({ id, message, type });
+
+  setTimeout(() => {
+    toasts.value = toasts.value.filter((toast) => toast.id !== id);
+  }, 3500);
+}
+
+function removeToast(id) {
+  toasts.value = toasts.value.filter((toast) => toast.id !== id);
+}
+
+function parseJsonSafely(text) {
+  try {
+    return text ? JSON.parse(text) : {};
+  } catch {
+    return {};
+  }
+}
+
+function openFileDialog() {
+  fileInputRef.value?.click();
+}
+
+function onDragOver(event) {
+  event.preventDefault();
+  isDragging.value = true;
+}
+
+function onDragLeave(event) {
+  event.preventDefault();
+  isDragging.value = false;
+}
+
+function onDrop(event) {
+  event.preventDefault();
+  isDragging.value = false;
+
+  const file = event.dataTransfer?.files?.[0] || null;
+
+  if (file) {
+    selectedFile.value = file;
+    uploadError.value = "";
+  }
 }
 
 async function uploadImage() {
   uploadError.value = "";
-  uploadMessage.value = "";
+  uploadProgress.value = 0;
 
   if (!selectedFile.value) {
     uploadError.value = "Selecciona una imagen antes de subir.";
+    addToast(uploadError.value, "error");
     return;
   }
 
@@ -71,25 +121,50 @@ async function uploadImage() {
   uploading.value = true;
 
   try {
-    const response = await fetch(`${apiBaseUrl}/api/images/upload`, {
-      method: "POST",
-      body: formData,
+    await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.open("POST", `${apiBaseUrl}/api/images/upload`);
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) {
+          return;
+        }
+
+        uploadProgress.value = Math.round((event.loaded * 100) / event.total);
+      };
+
+      xhr.onload = () => {
+        const data = parseJsonSafely(xhr.responseText);
+
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(data);
+          return;
+        }
+
+        reject(new Error(data.message || `Error HTTP ${xhr.status}`));
+      };
+
+      xhr.onerror = () => {
+        reject(new Error("No se pudo conectar con la API de subida."));
+      };
+
+      xhr.send(formData);
     });
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || `Error HTTP ${response.status}`);
-    }
-
-    uploadMessage.value = "Imagen subida correctamente.";
+    addToast("Imagen subida correctamente.", "success");
     selectedFile.value = null;
+    if (fileInputRef.value) {
+      fileInputRef.value.value = "";
+    }
     await fetchImages();
     activeScreen.value = "gallery";
   } catch (err) {
     uploadError.value = err?.message || "No se pudo subir la imagen.";
+    addToast(uploadError.value, "error");
   } finally {
     uploading.value = false;
+    uploadProgress.value = 0;
   }
 }
 
@@ -136,12 +211,30 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
       <section v-if="activeScreen === 'upload'" class="upload-panel">
         <h2>Sube tus imagenes de perritos bonitos</h2>
         <p class="upload-help">
-          Formatos permitidos: PNG, JPG, WEBP, GIF, BMP, AVIF.
+          Arrastra y suelta una imagen o selecciona un archivo desde tu equipo.
         </p>
+
+        <div
+          class="dropzone"
+          :class="{ dragging: isDragging }"
+          @dragenter="onDragOver"
+          @dragover="onDragOver"
+          @dragleave="onDragLeave"
+          @drop="onDrop"
+          @click="openFileDialog"
+        >
+          <p>Drop your dog image here</p>
+          <small>PNG, JPG, WEBP, GIF, BMP, AVIF - Max 10MB</small>
+        </div>
 
         <label class="file-input-wrap">
           <span>Seleccionar imagen</span>
-          <input type="file" accept="image/*" @change="onFileSelected" />
+          <input
+            ref="fileInputRef"
+            type="file"
+            accept="image/*"
+            @change="onFileSelected"
+          />
         </label>
 
         <p v-if="selectedFile" class="file-selected">
@@ -152,9 +245,11 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
           {{ uploading ? "Subiendo..." : "Subir imagen" }}
         </button>
 
-        <p v-if="uploadMessage" class="upload-message success">
-          {{ uploadMessage }}
-        </p>
+        <div v-if="uploading" class="progress-wrap">
+          <div class="progress-bar" :style="{ width: `${uploadProgress}%` }"></div>
+          <span>{{ uploadProgress }}%</span>
+        </div>
+
         <p v-if="uploadError" class="upload-message error">{{ uploadError }}</p>
       </section>
 
@@ -195,6 +290,18 @@ onUnmounted(() => window.removeEventListener("keydown", handleKeydown));
         />
         <p class="preview-title">{{ previewImage.name }}</p>
       </div>
+    </section>
+
+    <section class="toast-container" aria-live="polite" aria-atomic="true">
+      <article
+        v-for="toast in toasts"
+        :key="toast.id"
+        class="toast"
+        :class="toast.type"
+        @click="removeToast(toast.id)"
+      >
+        {{ toast.message }}
+      </article>
     </section>
   </div>
 </template>

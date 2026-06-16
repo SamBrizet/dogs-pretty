@@ -15,6 +15,9 @@ const isDragging = ref(false);
 const toasts = ref([]);
 const fileInputRef = ref(null);
 const localPreviewUrl = ref("");
+const commentAuthor = ref("");
+const commentText = ref("");
+const submittingComment = ref(false);
 
 const skeletonItems = Array.from({ length: 6 });
 
@@ -60,6 +63,7 @@ async function fetchImages() {
 
 function openPreview(image) {
   previewImage.value = image;
+  commentText.value = "";
 }
 
 function closePreview() {
@@ -198,6 +202,87 @@ async function uploadImage() {
   } finally {
     uploading.value = false;
     uploadProgress.value = 0;
+  }
+}
+
+function updateImageInteraction(imagePath, interaction) {
+  images.value = images.value.map((image) =>
+    image.path === imagePath
+      ? {
+          ...image,
+          likes: interaction.likes,
+          comments: interaction.comments,
+        }
+      : image,
+  );
+
+  if (previewImage.value?.path === imagePath) {
+    previewImage.value = {
+      ...previewImage.value,
+      likes: interaction.likes,
+      comments: interaction.comments,
+    };
+  }
+}
+
+async function likeImage(imagePath) {
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/images/like`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ imagePath }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || `Error HTTP ${response.status}`);
+    }
+
+    updateImageInteraction(imagePath, data.interaction);
+  } catch (err) {
+    addToast(err?.message || "No se pudo registrar el like.", "error");
+  }
+}
+
+async function submitComment(imagePath) {
+  const text = commentText.value.trim();
+
+  if (!text) {
+    addToast("Escribe un comentario antes de enviar.", "error");
+    return;
+  }
+
+  submittingComment.value = true;
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/api/images/comment`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        imagePath,
+        author: commentAuthor.value.trim(),
+        text,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || `Error HTTP ${response.status}`);
+    }
+
+    updateImageInteraction(imagePath, data.interaction);
+    commentText.value = "";
+    addToast("Comentario agregado.", "success");
+  } catch (err) {
+    addToast(err?.message || "No se pudo guardar el comentario.", "error");
+  } finally {
+    submittingComment.value = false;
   }
 }
 
@@ -354,6 +439,16 @@ onUnmounted(() => {
               <div class="meta">
                 <h2>{{ image.name }}</h2>
                 <p>{{ new Date(image.updated).toLocaleString() }}</p>
+                <div class="card-stats">
+                  <button
+                    type="button"
+                    class="tiny-btn"
+                    @click.stop="likeImage(image.path)"
+                  >
+                    ❤️ {{ image.likes || 0 }}
+                  </button>
+                  <span>💬 {{ image.comments?.length || 0 }}</span>
+                </div>
               </div>
               <div class="card-overlay">Click to preview</div>
             </article>
@@ -379,6 +474,42 @@ onUnmounted(() => {
           class="preview-image"
         />
         <p class="preview-title">{{ previewImage.name }}</p>
+        <div class="preview-actions">
+          <button type="button" class="tiny-btn" @click="likeImage(previewImage.path)">
+            ❤️ {{ previewImage.likes || 0 }}
+          </button>
+          <span>{{ previewImage.comments?.length || 0 }} comentarios</span>
+        </div>
+
+        <section class="comments-panel">
+          <h3>Comentarios</h3>
+
+          <form class="comment-form" @submit.prevent="submitComment(previewImage.path)">
+            <input
+              v-model="commentAuthor"
+              type="text"
+              placeholder="Tu nombre (opcional)"
+              maxlength="40"
+            />
+            <textarea
+              v-model="commentText"
+              placeholder="Escribe un comentario bonito..."
+              maxlength="300"
+            ></textarea>
+            <button type="submit" :disabled="submittingComment">
+              {{ submittingComment ? "Enviando..." : "Comentar" }}
+            </button>
+          </form>
+
+          <ul v-if="previewImage.comments?.length" class="comment-list">
+            <li v-for="comment in previewImage.comments" :key="comment.id">
+              <p class="comment-author">{{ comment.author || "Anonimo" }}</p>
+              <p class="comment-text">{{ comment.text }}</p>
+              <p class="comment-date">{{ new Date(comment.createdAt).toLocaleString() }}</p>
+            </li>
+          </ul>
+          <p v-else class="no-comments">Aun no hay comentarios.</p>
+        </section>
       </div>
     </section>
 
